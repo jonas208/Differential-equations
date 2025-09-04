@@ -1,0 +1,463 @@
+function get_coefficient_mat_cpu(divergence_mat::Matrix{T}, n, obstacles) where T
+    coefficient_mat = spzeros(T, n^2, n^2)
+    linear_indices = LinearIndices(divergence_mat)
+    for j in 1:n, i in 1:n
+        row = linear_indices[i, j]
+        # innerer Bereich
+        if 3 <= i <= n-2 && 3 <= j <= n-2 && !position_in_obstacle(obstacles, i, j)
+            col1 = linear_indices[i, j]
+            col2 = linear_indices[i+1, j]
+            col3 = linear_indices[i-1, j]
+            col4 = linear_indices[i, j-1]
+            col5 = linear_indices[i, j+1]
+            coefficient_mat[row, col1] = T(-4.0)
+            coefficient_mat[row, col2] = T(1.0)
+            coefficient_mat[row, col3] = T(1.0)
+            coefficient_mat[row, col4] = T(1.0)
+            coefficient_mat[row, col5] = T(1.0)
+        end
+        # Ränder
+        if i <= 2 # Neumann
+            col1 = linear_indices[i+1, j]
+            col2 = linear_indices[i, j]
+            coefficient_mat[row, col1] = T(-1.0)
+            coefficient_mat[row, col2] = T(1.0)
+        end
+        if i >= n-1
+            # Dirichlet
+            col = linear_indices[i, j]
+            coefficient_mat[row, col] = T(1.0)
+        end
+        if j <= 2 # Neumann
+            col1 = linear_indices[i, j+1]
+            col2 = linear_indices[i, j]
+            coefficient_mat[row, col1] = T(-1.0)
+            coefficient_mat[row, col2] = T(1.0)
+        end
+        if j >= n-1 # Neumann
+            col1 = linear_indices[i, j-1]
+            col2 = linear_indices[i, j]
+            coefficient_mat[row, col1] = T(-1.0)
+            coefficient_mat[row, col2] = T(1.0)
+        end
+
+        for obstacle in obstacles
+            i0, i1, j0, j1 = get_indices(obstacle)
+        
+            # i0, i1; j0, j1
+            if i0 <= i <= i1 && j0 <= j <= j1
+                # Kanten
+                if i0+1 <= i <= i1-1 && j0+1 <= j <= j1-1 # Dirichlet
+                    col = linear_indices[i, j]
+                    coefficient_mat[row, col] = T(1.0)
+                end
+                if i == i0 && j != j0 && j != j1 # Neumann
+                    col1 = linear_indices[i-1, j]
+                    col2 = linear_indices[i, j]
+                    coefficient_mat[row, col1] = T(-1.0)
+                    coefficient_mat[row, col2] = T(1.0)
+                end
+                if i == i1 && j != j0 && j != j1 # Neumann
+                    col1 = linear_indices[i+1, j]
+                    col2 = linear_indices[i, j]
+                    coefficient_mat[row, col1] = T(-1.0)
+                    coefficient_mat[row, col2] = T(1.0)
+                end
+                if j == j0 && i != i0 && i != i1 # Neumann
+                    col1 = linear_indices[i, j-1]
+                    col2 = linear_indices[i, j]
+                    coefficient_mat[row, col1] = T(-1.0)
+                    coefficient_mat[row, col2] = T(1.0)
+                end
+                if j == j1 && i != i0 && i != i1 # Neumann
+                    col1 = linear_indices[i, j+1]
+                    col2 = linear_indices[i, j]
+                    coefficient_mat[row, col1] = T(-1.0)
+                    coefficient_mat[row, col2] = T(1.0)
+                end
+
+                # Ecken
+                if i == i0 && j == j0 # Neumann
+                    col1 = linear_indices[i, j]
+                    col2 = linear_indices[i-1, j-1]
+                    coefficient_mat[row, col1] = T(-1.0)
+                    coefficient_mat[row, col2] = T(1.0)
+                end
+                if i == i0 && j == j1 # Neumann
+                    col1 = linear_indices[i-1, j+1]
+                    col2 = linear_indices[i, j]
+                    coefficient_mat[row, col1] = T(-1.0)
+                    coefficient_mat[row, col2] = T(1.0)
+                end
+                if i == i1 && j == j0 # Neumann
+                    col1 = linear_indices[i+1, j-1]
+                    col2 = linear_indices[i, j]
+                    coefficient_mat[row, col1] = T(-1.0)
+                    coefficient_mat[row, col2] = T(1.0)
+                end
+                if i == i1 && j == j1 # Neumann
+                    col1 = linear_indices[i+1, j+1]
+                    col2 = linear_indices[i, j]
+                    coefficient_mat[row, col1] = T(-1.0)
+                    coefficient_mat[row, col2] = T(1.0)
+                end
+            end
+
+        end
+    end
+
+    return coefficient_mat
+end
+
+function get_coefficient_mat_cpu_2(divergence_mat::Matrix{T}, n, obstacles) where T
+    linear_indices = LinearIndices(divergence_mat)
+    I = Int[]; J = Int[]; X = T[];
+    for j in 1:n, i in 1:n
+        row = linear_indices[i, j]
+        # innerer Bereich
+        if 3 <= i <= n-2 && 3 <= j <= n-2 && !position_in_obstacle(obstacles, i, j)
+            col1 = linear_indices[i, j]
+            col2 = linear_indices[i+1, j]
+            col3 = linear_indices[i-1, j]
+            col4 = linear_indices[i, j-1]
+            col5 = linear_indices[i, j+1]
+
+            push!(I, row)
+            push!(I, row)
+            push!(I, row)
+            push!(I, row)
+            push!(I, row)
+
+            push!(J, col1)
+            push!(J, col2)
+            push!(J, col3)
+            push!(J, col4)
+            push!(J, col5)
+
+            push!(X, T(-4.0))
+            push!(X, T(1.0))
+            push!(X, T(1.0))
+            push!(X, T(1.0))
+            push!(X, T(1.0))
+        end
+        # Ränder
+        if i <= 2 # Neumann
+            col1 = linear_indices[i+1, j]
+            col2 = linear_indices[i, j]
+
+            push!(I, row)
+            push!(I, row)
+
+            push!(J, col1)
+            push!(J, col2)
+
+            push!(X, T(-1.0))
+            push!(X, T(1.0))
+        end
+        if i >= n-1
+            # Dirichlet
+            col = linear_indices[i, j]
+
+            push!(I, row)
+            push!(J, col)
+            push!(X, T(1.0))
+        end
+        if j <= 2 # Neumann
+            col1 = linear_indices[i, j+1]
+            col2 = linear_indices[i, j]
+            
+            push!(I, row)
+            push!(I, row)
+
+            push!(J, col1)
+            push!(J, col2)
+
+            push!(X, T(-1.0))
+            push!(X, T(1.0))
+        end
+        if j >= n-1 # Neumann
+            col1 = linear_indices[i, j-1]
+            col2 = linear_indices[i, j]
+            
+            push!(I, row)
+            push!(I, row)
+
+            push!(J, col1)
+            push!(J, col2)
+
+            push!(X, T(-1.0))
+            push!(X, T(1.0))
+        end
+
+        for obstacle in obstacles
+            i0, i1, j0, j1 = get_indices(obstacle)
+        
+            # i0, i1; j0, j1
+            if i0 <= i <= i1 && j0 <= j <= j1
+                # Kanten
+                if i0+1 <= i <= i1-1 && j0+1 <= j <= j1-1 # Dirichlet
+                    col = linear_indices[i, j]
+                    
+                    push!(I, row)
+                    push!(J, col)
+                    push!(X, T(1.0))
+                end
+                if i == i0 && j != j0 && j != j1 # Neumann
+                    col1 = linear_indices[i-1, j]
+                    col2 = linear_indices[i, j]
+                    
+                    push!(I, row)
+                    push!(I, row)
+
+                    push!(J, col1)
+                    push!(J, col2)
+
+                    push!(X, T(-1.0))
+                    push!(X, T(1.0))
+                end
+                if i == i1 && j != j0 && j != j1 # Neumann
+                    col1 = linear_indices[i+1, j]
+                    col2 = linear_indices[i, j]
+                    
+                    push!(I, row)
+                    push!(I, row)
+
+                    push!(J, col1)
+                    push!(J, col2)
+
+                    push!(X, T(-1.0))
+                    push!(X, T(1.0))
+                end
+                if j == j0 && i != i0 && i != i1 # Neumann
+                    col1 = linear_indices[i, j-1]
+                    col2 = linear_indices[i, j]
+                    
+                    push!(I, row)
+                    push!(I, row)
+
+                    push!(J, col1)
+                    push!(J, col2)
+
+                    push!(X, T(-1.0))
+                    push!(X, T(1.0))
+                end
+                if j == j1 && i != i0 && i != i1 # Neumann
+                    col1 = linear_indices[i, j+1]
+                    col2 = linear_indices[i, j]
+                    
+                    push!(I, row)
+                    push!(I, row)
+
+                    push!(J, col1)
+                    push!(J, col2)
+
+                    push!(X, T(-1.0))
+                    push!(X, T(1.0))
+                end
+
+                # Ecken
+                if i == i0 && j == j0 # Neumann
+                    col1 = linear_indices[i, j]
+                    col2 = linear_indices[i-1, j-1]
+                    
+                    push!(I, row)
+                    push!(I, row)
+
+                    push!(J, col1)
+                    push!(J, col2)
+
+                    push!(X, T(-1.0))
+                    push!(X, T(1.0))
+                end
+                if i == i0 && j == j1 # Neumann
+                    col1 = linear_indices[i-1, j+1]
+                    col2 = linear_indices[i, j]
+                    
+                    push!(I, row)
+                    push!(I, row)
+
+                    push!(J, col1)
+                    push!(J, col2)
+
+                    push!(X, T(-1.0))
+                    push!(X, T(1.0))
+                end
+                if i == i1 && j == j0 # Neumann
+                    col1 = linear_indices[i+1, j-1]
+                    col2 = linear_indices[i, j]
+                    
+                    push!(I, row)
+                    push!(I, row)
+
+                    push!(J, col1)
+                    push!(J, col2)
+
+                    push!(X, T(-1.0))
+                    push!(X, T(1.0))
+                end
+                if i == i1 && j == j1 # Neumann
+                    col1 = linear_indices[i+1, j+1]
+                    col2 = linear_indices[i, j]
+                    
+                    push!(I, row)
+                    push!(I, row)
+
+                    push!(J, col1)
+                    push!(J, col2)
+
+                    push!(X, T(-1.0))
+                    push!(X, T(1.0))
+                end
+            end
+
+        end
+    end
+
+    coefficient_mat = sparse(I, J, X, n^2, n^2, *)
+    return coefficient_mat
+end
+
+function calculate_pressure(param, time_step::T, vx::AbstractMatrix{T}, vy::AbstractMatrix{T}) where T
+    L, kinematic_viscosity, density, horizontal_velocity, obstacles, n, dx, coefficient_mat, pressure_vec, divergence_mat, lin_solve, use_weno, ep, p, fluxes_x, fluxes_y = param
+
+    divergence_mat .= T(0.0)
+
+    for j in 3:n-2, i in 3:n-2
+        divergence_mat[i, j] = (vx[i+1, j] - vx[i-1, j] + vy[i, j+1] - vy[i, j-1]) / (2*dx)
+    end
+
+    for obstacle in obstacles
+        i0, i1, j0, j1 = get_indices(obstacle)
+        divergence_mat[i0:i1, j0:j1] .= T(0.0)
+    end
+    
+    divergence_mat[n-1, :] .= T(0.0)
+    divergence_mat[n, :] .= T(0.0)
+
+    divergence_mat *= (density/time_step) * dx^2
+
+    lin_solve.b = vec(divergence_mat)
+    pressure_vec .= solve!(lin_solve)
+    # pressure_vec .= convert(Vector{T}, coefficient_mat \ vec(divergence_mat))
+    pressure = reshape(pressure_vec, n, n)
+
+    return pressure
+end
+
+function calculate_pressure_kernel!(divergence_mat::CuDeviceMatrix{T}, vx::CuDeviceMatrix{T}, vy::CuDeviceMatrix{T}, obstacle_indices::CuDeviceVector, density::T, n, dx::T, time_step::T) where T
+    i = threadIdx().x + (blockIdx().x - 1) * blockDim().x
+    j = threadIdx().y + (blockIdx().y - 1) * blockDim().y
+
+    if i <= n && j <= n
+        divergence_mat[i, j] = T(0.0)
+        if 3 <= i <= n-2 && 3 <= j <= n-2
+            divergence_mat[i, j] = (vx[i+1, j] - vx[i-1, j] + vy[i, j+1] - vy[i, j-1]) / (2*dx)
+            divergence_mat[i, j] *= (density/time_step) * dx^2
+        end
+        for k in 1:4:length(obstacle_indices)
+            i0 = obstacle_indices[k]
+            i1 = obstacle_indices[k+1]
+            j0 = obstacle_indices[k+2]
+            j1 = obstacle_indices[k+3]
+            if i0 <= i <= i1 && j0 <= j <= j1
+                divergence_mat[i, j] = T(0.0)
+            end
+        end
+    end
+
+    return nothing
+end
+
+function calculate_pressure(param, time_step::T, vx::CuMatrix{T}, vy::CuMatrix{T}) where T
+    L, kinematic_viscosity, density, horizontal_velocity, obstacles, n, dx, coefficient_mat, pressure_vec, divergence_mat, lin_solve, use_weno, ep, p, fluxes_x, fluxes_y = param
+
+    obstacle_indices = CuArray(get_obstacle_indices(obstacles))
+
+    kernel = @cuda launch=false calculate_pressure_kernel!(divergence_mat, vx, vy, obstacle_indices, density, n, dx, time_step)
+    config = CUDA.launch_configuration(kernel.fun)
+    
+    threads_per_dim = Int(floor(sqrt(config.threads)))
+
+    x_threads = min(n, threads_per_dim)
+    x_blocks = cld(n, x_threads)
+
+    y_threads = min(n, threads_per_dim)
+    y_blocks = cld(n, y_threads)
+
+    kernel(divergence_mat, vx, vy, obstacle_indices, density, n, dx, time_step, threads=(x_threads, y_threads), blocks=(x_blocks, y_blocks))
+
+    x = pressure_vec
+    b = vec(divergence_mat)
+    cudss("solve", lin_solve, x, b)
+    pressure = reshape(x, n, n)
+
+    return pressure
+end
+
+function update_velocities!(vx::AbstractMatrix{T}, vy::AbstractMatrix{T}, pressure::AbstractMatrix{T}, density::T, n, dx::T, time_step::T) where T
+    for j in 3:n-2, i in 3:n-2
+        vx[i, j] -= (time_step / density) * ((pressure[i+1, j] - pressure[i-1, j]) / (2*dx))
+        vy[i, j] -= (time_step / density) * ((pressure[i, j+1] - pressure[i, j-1]) / (2*dx))
+    end
+end
+
+function pressure_correction_cpu!(integrator)
+    u = integrator.u
+    param = integrator.p 
+    L, kinematic_viscosity, density, horizontal_velocity, obstacles, n, dx, coefficient_mat, pressure_vec, divergence_mat, lin_solve, use_weno, ep, p, fluxes_x, fluxes_y = param
+    time_step = integrator.t - integrator.tprev
+
+    vx = reshape(view(u, 1:n^2), n, n)
+    vy = reshape(view(u, n^2+1:2*n^2), n, n)
+
+    apply_boundary_conditions!(vx, vy, horizontal_velocity, obstacles)
+    pressure = calculate_pressure(param, time_step, vx, vy)
+    update_velocities!(vx, vy, pressure, density, n, dx, time_step)
+    apply_boundary_conditions!(vx, vy, horizontal_velocity, obstacles)
+
+    println(integrator.t)
+end
+
+function update_velocities_kernel!(vx::CuDeviceMatrix{T}, vy::CuDeviceMatrix{T}, pressure::CuDeviceMatrix{T}, density::T, n, dx::T, time_step::T) where T
+    i = threadIdx().x + (blockIdx().x - 1) * blockDim().x
+    j = threadIdx().y + (blockIdx().y - 1) * blockDim().y
+
+    if 3 <= i <= n-2 && 3 <= j <= n-2
+        vx[i, j] -= (time_step / density) * ((pressure[i+1, j] - pressure[i-1, j]) / (2*dx))
+        vy[i, j] -= (time_step / density) * ((pressure[i, j+1] - pressure[i, j-1]) / (2*dx))
+    end
+
+    return nothing
+end
+
+function update_velocities!(vx::CuMatrix{T}, vy::CuMatrix{T}, pressure::CuMatrix{T}, density::T, n, dx::T, time_step::T) where T
+    kernel = @cuda launch=false update_velocities_kernel!(vx, vy, pressure, density, n, dx, time_step)
+    config = CUDA.launch_configuration(kernel.fun)
+
+    threads_per_dim = Int(floor(sqrt(config.threads)))
+
+    x_threads = min(n, threads_per_dim)
+    x_blocks = cld(n, x_threads)
+
+    y_threads = min(n, threads_per_dim)
+    y_blocks = cld(n, y_threads)
+
+    kernel(vx, vy, pressure, density, n, dx, time_step, threads=(x_threads, y_threads), blocks=(x_blocks, y_blocks))
+end
+
+function pressure_correction_gpu!(integrator)
+    u = integrator.u
+    param = integrator.p 
+    L, kinematic_viscosity, density, horizontal_velocity, obstacles, n, dx, coefficient_mat, pressure_vec, divergence_mat, lin_solve, use_weno, ep, p, fluxes_x, fluxes_y = param
+    time_step = integrator.t - integrator.tprev
+
+    vx = reshape(view(u, 1:n^2), n, n)
+    vy = reshape(view(u, n^2+1:2*n^2), n, n)
+
+    apply_boundary_conditions!(vx, vy, horizontal_velocity, obstacles)
+    pressure = calculate_pressure(param, time_step, vx, vy)
+    update_velocities!(vx, vy, pressure, density, n, dx, time_step)
+    apply_boundary_conditions!(vx, vy, horizontal_velocity, obstacles)
+
+    println(integrator.t)
+end
