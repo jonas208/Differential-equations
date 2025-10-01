@@ -1,27 +1,37 @@
 function apply_boundary_conditions!(vx::AbstractMatrix{T}, vy::AbstractMatrix{T}, horizontal_velocity::T, obstacles) where T
-    # Dirichlet
-    vx[1, :] .= horizontal_velocity
-    vx[2, :] .= horizontal_velocity
+    # Dirichlet am unteren Rand
     vx[:, 1] .= 0.0
     vx[:, 2] .= 0.0
-    vx[:, end-1] .= 0.0
-    vx[:, end] .= 0.0
-    # Neumann
-    vx[end-1, :] .= vx[end-2, :]
-    vx[end, :] .= vx[end-1, :]
-
-    # Dirichlet
-    vy[1, :] .= 0.0
-    vy[2, :] .= 0.0
     vy[:, 1] .= 0.0
     vy[:, 2] .= 0.0
+
+    # Dirichlet am oberen Rand
+    vx[:, end-1] .= 0.0
+    vx[:, end] .= 0.0
     vy[:, end-1] .= 0.0
     vy[:, end] .= 0.0
-    # Neumann
+
+    # Dirichlet am linken Rand
+
+    # vx[1, :] .= horizontal_velocity
+    # vx[2, :] .= horizontal_velocity
+
+    ny = size(vx)[2]
+    mid = div(ny, 2)
+    factor = 0.025
+    vx[1, Int(round(mid-factor*ny)):Int(round(mid+factor*ny))] .= horizontal_velocity
+    vx[2, Int(round(mid-factor*ny)):Int(round(mid+factor*ny))] .= horizontal_velocity
+
+    vy[1, :] .= 0.0
+    vy[2, :] .= 0.0
+    
+    # Neumann am rechten Rand
+    vx[end-1, :] .= vx[end-2, :]
+    vx[end, :] .= vx[end-1, :]
     vy[end-1, :] .= vy[end-2, :]
     vy[end, :] .= vy[end-1, :]
 
-    # Dirichlet    
+    # Dirichlet für die Hindernisse
     for obstacle in obstacles
         i0, i1, j0, j1 = get_indices(obstacle)
         vx[i0:i1, j0:j1] .= T(0.0)
@@ -31,48 +41,63 @@ end
 
 function apply_boundary_conditions_kernel!(vx::CuDeviceMatrix{T}, vy::CuDeviceMatrix{T}, horizontal_velocity::T) where T
     k = threadIdx().x + (blockIdx().x - 1) * blockDim().x
+    nx, ny = size(vx)
 
-    if k <= size(vx)[1]
-        # Dirichlet
-        vx[1, k] = horizontal_velocity
-        vx[2, k] = horizontal_velocity
+    if k <= nx
+        # Dirichlet am unteren Rand
         vx[k, 1] = T(0.0)
         vx[k, 2] = T(0.0)
-        vx[k, end-1] = T(0.0)
-        vx[k, end] = T(0.0)
-        # Neumann
-        vx[end-1, k] = vx[end-2, k]
-        vx[end, k] = vx[end-1, k]
-
-        # Dirichlet
-        vy[1, k] = T(0.0)
-        vy[2, k] = T(0.0)
         vy[k, 1] = T(0.0)
         vy[k, 2] = T(0.0)
+
+        # Dirichlet am oberen Rand
+        vx[k, end-1] = T(0.0)
+        vx[k, end] = T(0.0)
         vy[k, end-1] = T(0.0)
         vy[k, end] = T(0.0)
-        # Neumann
+    end
+
+    if k <= ny
+        # Dirichlet am linken Rand
+
+        # vx[1, k] = horizontal_velocity
+        # vx[2, k] = horizontal_velocity
+
+        mid = div(ny, 2)
+        factor = 0.025
+        if Int(round(mid-factor*ny)) <= k <= Int(round(mid+factor*ny))
+            vx[1, k] = horizontal_velocity
+            vx[2, k] = horizontal_velocity
+        end
+
+        vy[1, k] = T(0.0)
+        vy[2, k] = T(0.0)
+        
+        # Neumann am rechten Rand
         vy[end-1, k] = vy[end-2, k]
         vy[end, k] = vy[end-1, k]
+        vx[end-1, k] = vx[end-2, k]
+        vx[end, k] = vx[end-1, k]
     end
 
     return nothing
 end
 
 function apply_boundary_conditions!(vx::CuMatrix{T}, vy::CuMatrix{T}, horizontal_velocity::T, obstacles) where T
-    n = size(vx)[1]
+    nx, ny = size(vx)
     
     kernel = @cuda launch=false apply_boundary_conditions_kernel!(vx, vy, horizontal_velocity)
     config = CUDA.launch_configuration(kernel.fun)
 
     threads = config.threads
 
-    x_threads = min(n, threads)
-    x_blocks = cld(n, x_threads)
+    n_max = max(nx, ny)
+    x_threads = min(n_max, threads)
+    x_blocks = cld(n_max, x_threads)
 
     kernel(vx, vy, horizontal_velocity, threads = x_threads, blocks = x_blocks)
 
-    # Dirichlet    
+    # Dirichlet für die Hindernisse  
     for obstacle in obstacles
         i0, i1, j0, j1 = get_indices(obstacle)
         vx[i0:i1, j0:j1] .= T(0.0)
@@ -157,12 +182,12 @@ function recover_x(i, j, dx::T, vx::AbstractMatrix{T}, vy::AbstractMatrix{T}, us
 end
 
 # berechne u^{\pm}_{i,j+1/2} wahlweise mit oder ohne WENO
-function recover_y(i, j, dx::T, vx::AbstractMatrix{T}, vy::AbstractMatrix{T}, use_weno, ep::T, p::T) where T
+function recover_y(i, j, dy::T, vx::AbstractMatrix{T}, vy::AbstractMatrix{T}, use_weno, ep::T, p::T) where T
     if use_weno
-        vx_l = cweno_y(j*dx, (j-T(0.5))*dx, dx, view(vx, i, j-1:j+1), view(vx, i-1:i+1, j), ep, p) # P_j(y_{j+1/2})
-        vx_r = cweno_y(j*dx, (j+T(0.5))*dx, dx, view(vx, i, j:j+2), view(vx, i-1:i+1, j+1), ep, p) # P_{j+1}(y_{j+1/2})
-        vy_l = cweno_y(j*dx, (j-T(0.5))*dx, dx, view(vy, i, j-1:j+1), view(vy, i-1:i+1, j), ep, p) # P_j(y_{j+1/2})
-        vy_r = cweno_y(j*dx, (j+T(0.5))*dx, dx, view(vy, i, j:j+2), view(vy, i-1:i+1, j+1), ep, p) # P_{j+1}(y_{j+1/2})
+        vx_l = cweno_y(j*dy, (j-T(0.5))*dy, dy, view(vx, i, j-1:j+1), view(vx, i-1:i+1, j), ep, p) # P_j(y_{j+1/2})
+        vx_r = cweno_y(j*dy, (j+T(0.5))*dy, dy, view(vx, i, j:j+2), view(vx, i-1:i+1, j+1), ep, p) # P_{j+1}(y_{j+1/2})
+        vy_l = cweno_y(j*dy, (j-T(0.5))*dy, dy, view(vy, i, j-1:j+1), view(vy, i-1:i+1, j), ep, p) # P_j(y_{j+1/2})
+        vy_r = cweno_y(j*dy, (j+T(0.5))*dy, dy, view(vy, i, j:j+2), view(vy, i-1:i+1, j+1), ep, p) # P_{j+1}(y_{j+1/2})
     else
         vx_l = vx[i, j]
         vy_l = vy[i, j]
@@ -189,12 +214,12 @@ function recover_x(i, j, dx::T, vx::CuDeviceMatrix{T}, vy::CuDeviceMatrix{T}, us
 end
 
 # berechne u^{\pm}_{i,j+1/2} wahlweise mit oder ohne WENO
-function recover_y(i, j, dx::T, vx::CuDeviceMatrix{T}, vy::CuDeviceMatrix{T}, use_weno, ep::T, p::T) where T
+function recover_y(i, j, dy::T, vx::CuDeviceMatrix{T}, vy::CuDeviceMatrix{T}, use_weno, ep::T, p::T) where T
     if use_weno
-        vx_l = cweno_y(j*dx, (j-T(0.5))*dx, dx, vx[i, j-1], vx[i, j], vx[i, j+1], vx[i-1, j], vx[i, j], vx[i+1, j], ep, p) # P_j(y_{j+1/2})
-        vx_r = cweno_y(j*dx, (j+T(0.5))*dx, dx, vx[i, j], vx[i, j+1], vx[i, j+2], vx[i-1, j+1], vx[i, j+1], vx[i+1, j+1], ep, p) # P_{j+1}(y_{j+1/2})
-        vy_l = cweno_y(j*dx, (j-T(0.5))*dx, dx, vy[i, j-1], vy[i, j], vy[i, j+1], vy[i-1, j], vy[i, j], vy[i+1, j], ep, p) # P_j(y_{j+1/2})
-        vy_r = cweno_y(j*dx, (j+T(0.5))*dx, dx, vy[i, j], vy[i, j+1], vy[i, j+2], vy[i-1, j+1], vy[i, j+1], vy[i+1, j+1], ep, p) # P_{j+1}(y_{j+1/2})
+        vx_l = cweno_y(j*dy, (j-T(0.5))*dy, dy, vx[i, j-1], vx[i, j], vx[i, j+1], vx[i-1, j], vx[i, j], vx[i+1, j], ep, p) # P_j(y_{j+1/2})
+        vx_r = cweno_y(j*dy, (j+T(0.5))*dy, dy, vx[i, j], vx[i, j+1], vx[i, j+2], vx[i-1, j+1], vx[i, j+1], vx[i+1, j+1], ep, p) # P_{j+1}(y_{j+1/2})
+        vy_l = cweno_y(j*dy, (j-T(0.5))*dy, dy, vy[i, j-1], vy[i, j], vy[i, j+1], vy[i-1, j], vy[i, j], vy[i+1, j], ep, p) # P_j(y_{j+1/2})
+        vy_r = cweno_y(j*dy, (j+T(0.5))*dy, dy, vy[i, j], vy[i, j+1], vy[i, j+2], vy[i-1, j+1], vy[i, j+1], vy[i+1, j+1], ep, p) # P_{j+1}(y_{j+1/2})
     else
         vx_l = vx[i, j]
         vy_l = vy[i, j]

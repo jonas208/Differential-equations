@@ -4,11 +4,11 @@ struct Rectangle
     i1::Int
     j0::Int
     j1::Int
-    function Rectangle(center, x_len, y_len, dx)
+    function Rectangle(center, x_len, y_len, dx, dy)
         i0 = Int(round((center[1] - (x_len/2)) / dx))
         i1 = Int(round((center[1] + (x_len/2)) / dx))
-        j0 = Int(round((center[2] - (y_len/2)) / dx))
-        j1 = Int(round((center[2] + (y_len/2)) / dx))
+        j0 = Int(round((center[2] - (y_len/2)) / dy))
+        j1 = Int(round((center[2] + (y_len/2)) / dy))
         
         new(i0, i1, j0, j1)
     end
