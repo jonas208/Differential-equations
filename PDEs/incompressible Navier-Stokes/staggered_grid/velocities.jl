@@ -1,4 +1,4 @@
-function apply_boundary_conditions_vx_kernel!(vx::CuDeviceMatrix{T}, horizontal_velocity::T, nx_vx, ny_vx) where T
+function apply_boundary_conditions_vx_kernel!(vx::CuDeviceMatrix{T}, nx_vx, ny_vx) where T
     k = threadIdx().x + (blockIdx().x - 1) * blockDim().x
 
     if k <= nx_vx
@@ -6,31 +6,26 @@ function apply_boundary_conditions_vx_kernel!(vx::CuDeviceMatrix{T}, horizontal_
         vx[k, 2] = -vx[k, 3] # hinter dem Rand, lineare Interpolation auf den Rand soll 0 ergeben
         vx[k, 1] = -vx[k, 4] # hinter dem Rand, lineare Interpolation auf den Rand soll 0 ergeben
 
-        # oberer Rand (No-Slip-Bedingung)
-        vx[k, end-1] = -vx[k, end-2] # hinter dem Rand, lineare Interpolation auf den Rand soll 0 ergeben
-        vx[k, end] = -vx[k, end-3] # hinter dem Rand, lineare Interpolation auf den Rand soll 0 ergeben
+        # oberer Rand (Ausströmungsbedingung)
+        vx[k, end-1] = vx[k, end-2] # hinter dem Rand, Ableitung auf dem Rand soll 0 ergeben
+        vx[k, end] = vx[k, end-2] # hinter dem Rand, Ableitung auf dem Rand soll 0 ergeben
     end
 
     if k <= ny_vx
-
-        if !(240 <= k <= 260)
-            horizontal_velocity = T(0.0)
-        end
-
-        # linker Rand (Einströmungsbedingung)
-        vx[2, k] = horizontal_velocity # auf dem Rand
-        vx[1, k] = T(2.0) * horizontal_velocity - vx[3, k] # hinter dem Rand, lineare Interpolation auf den Rand soll horizontal_velocity ergeben
-
-        # rechter Rand (Ausströmungsbedingung)
-        vx[end-1, k] = vx[end-2, k] # auf dem Rand, Ableitung auf dem Rand soll 0 ergeben
-        vx[end, k] = vx[end-2, k] # hinter dem Rand, Ableitung auf dem Rand soll 0 ergeben
+        # linker Rand (No-Slip-Bedingung)
+        vx[2, k] = T(0.0) # auf dem Rand
+        vx[1, k] = -vx[3, k] # hinter dem Rand, lineare Interpolation auf den Rand soll 0 ergeben
+        
+        # rechter Rand (No-Slip-Bedingung)
+        vx[end-1, k] = T(0.0) # auf dem Rand
+        vx[end, k] = -vx[end-2, k] # hinter dem Rand, lineare Interpolation auf den Rand soll 0 ergeben
     end
 
     return nothing
 end
 
 function apply_boundary_conditions_vx!(vx::CuMatrix{T}, param) where T
-    kernel = @cuda launch = false apply_boundary_conditions_vx_kernel!(vx, param.horizontal_velocity, param.nx_vx, param.ny_vx)
+    kernel = @cuda launch = false apply_boundary_conditions_vx_kernel!(vx, param.nx_vx, param.ny_vx)
     config = CUDA.launch_configuration(kernel.fun)
 
     threads = config.threads
@@ -39,7 +34,7 @@ function apply_boundary_conditions_vx!(vx::CuMatrix{T}, param) where T
     x_threads = min(n_max, threads)
     x_blocks = cld(n_max, x_threads)
 
-    kernel(vx, param.horizontal_velocity, param.nx_vx, param.ny_vx, threads=x_threads, blocks=x_blocks)
+    kernel(vx, param.nx_vx, param.ny_vx, threads=x_threads, blocks=x_blocks)
 end
 
 function apply_boundary_conditions_vy_kernel!(vy::CuDeviceMatrix{T}, nx_vy, ny_vy) where T
@@ -48,21 +43,23 @@ function apply_boundary_conditions_vy_kernel!(vy::CuDeviceMatrix{T}, nx_vy, ny_v
     if k <= nx_vy
         # unterer Rand (No-Slip-Bedingung)
         vy[k, 2] = T(0.0) # auf dem Rand
-        vy[k, 1] = vy[k, 3] # hinter dem Rand, symmetrische Spiegelung wegen Kontinuität (dv/dy = 0)
+        vy[k, 1] = -vy[k, 3] # hinter dem Rand, lineare Interpolation auf den Rand soll 0 ergeben
 
-        # oberer Rand (No-Slip-Bedingung)
-        vy[k, end-1] = T(0.0) # auf dem Rand
-        vy[k, end] = vy[k, end-3] # hinter dem Rand, symmetrische Spiegelung wegen Kontinuität (dv/dy = 0)
+        # oberer Rand (Ausströmungsbedingung mit Backflow-Limiter)
+        outflow_val = max(T(0.0), vy[k, end-2]) # nur Ausströmung erlauben
+
+        vy[k, end-1] = outflow_val # auf dem Rand
+        vy[k, end] = outflow_val # hinter dem Rand
     end
 
     if k <= ny_vy
-        # linker Rand (Einströmungsbedingung)
+        # linker Rand (No-Slip-Bedingung)
         vy[2, k] = -vy[3, k] # hinter dem Rand, lineare Interpolation auf den Rand soll 0 ergeben
         vy[1, k] = -vy[4, k] # hinter dem Rand, lineare Interpolation auf den Rand soll 0 ergeben
 
-        # rechter Rand (Ausströmungsbedingung)
-        vy[end-1, k] = vy[end-2, k] # hinter dem Rand, Ableitung auf dem Rand soll 0 ergeben
-        vy[end, k] = vy[end-2, k] # hinter dem Rand, Ableitung auf dem Rand soll 0 ergeben
+        # rechter Rand (No-Slip-Bedingung)
+        vy[end-1, k] = -vy[end-2, k] # hinter dem Rand, Ableitung auf dem Rand soll 0 ergeben
+        vy[end, k] = -vy[end-3, k] # hinter dem Rand, Ableitung auf dem Rand soll 0 ergeben
     end
 
     return nothing
@@ -81,7 +78,7 @@ function apply_boundary_conditions_vy!(vy::CuMatrix{T}, param) where T
     kernel(vy, param.nx_vy, param.ny_vy, threads=x_threads, blocks=x_blocks)
 end
 
-function apply_boundary_conditions_limiter!(u, integrator, param, t::T) where T
+function navier_stokes_limiter!(u, navier_stokes_integrator, param, t::T) where T
     vx_length = param.nx_vx * param.ny_vx
     vy_length = param.nx_vy * param.ny_vy
 
@@ -90,6 +87,52 @@ function apply_boundary_conditions_limiter!(u, integrator, param, t::T) where T
 
     apply_boundary_conditions_vx!(vx, param)
     apply_boundary_conditions_vy!(vy, param)
+end
+
+function apply_boundary_conditions_c_kernel!(c::CuDeviceMatrix{T}, nx_c, ny_c) where T
+    k = threadIdx().x + (blockIdx().x - 1) * blockDim().x
+
+    if k <= nx_c
+        # unterer Rand (Neumann-Randbedingung)
+        c[k, 2] = c[k, 3] # hinter dem Rand, Ableitung auf dem Rand soll 0 ergeben
+        c[k, 1] = c[k, 4] # hinter dem Rand, Ableitung auf dem Rand soll 0 ergeben
+
+        # oberer Rand (Neumann-Randbedingung)
+        c[k, end-1] = c[k, end-2] # hinter dem Rand, Ableitung auf dem Rand soll 0 ergeben
+        c[k, end] = c[k, end-3] # hinter dem Rand, Ableitung auf dem Rand soll 0 ergeben
+    end
+
+    if k <= ny_c
+        # linker Rand (Neumann-Randbedingung)
+        c[2, k] = c[3, k] # hinter dem Rand, Ableitung auf dem Rand soll 0 ergeben
+        c[1, k] = c[4, k] # hinter dem Rand, Ableitung auf dem Rand soll 0 ergeben
+
+        # rechter Rand (Neumann-Randbedingung)
+        c[end-1, k] = c[end-2, k] # hinter dem Rand, Ableitung auf dem Rand soll 0 ergeben
+        c[end, k] = c[end-3, k] # hinter dem Rand, Ableitung auf dem Rand soll 0 ergeben
+    end
+
+    return nothing
+end
+
+function apply_boundary_conditions_c!(c::CuMatrix{T}, param) where T
+    kernel = @cuda launch = false apply_boundary_conditions_c_kernel!(c, param.nx_c, param.ny_c)
+    config = CUDA.launch_configuration(kernel.fun)
+
+    threads = config.threads
+
+    n_max = max(param.nx_c, param.ny_c)
+    x_threads = min(n_max, threads)
+    x_blocks = cld(n_max, x_threads)
+
+    kernel(c, param.nx_c, param.ny_c, threads=x_threads, blocks=x_blocks)
+end
+
+function advection_limiter!(u, advection_integrator, param, t::T) where T
+    c = reshape(u, param.nx_c, param.ny_c)
+
+    apply_boundary_conditions_c!(c, param)
+    c .= clamp.(c, T(0.0), T(1.0))
 end
 
 # 1D-CWENO-Interpolation in x-Richtung (P_{i}) mit zusätzlichem Term im Teilpolynom pC
@@ -166,11 +209,52 @@ function recover_y_vy(i, j, dx::T, dy::T, vy::CuDeviceMatrix{T}, ep::T, p::T) wh
     return vy_l, vy_r
 end
 
+function superbee(r::T) where T
+    return max(T(0.0), min(T(2.0) * r, T(1.0)), min(r, T(2.0)))
+end
+
+function vanleer(r::T) where T
+    return (r + abs(r)) / (T(1.0) + abs(r) + T(1e-12))
+end
+
+# 1D-MUSCL-Rekonstruktion in x-Richtung (TVD-Schema)
+function recover_x_c(i, j, c::CuDeviceMatrix{T}) where T
+    den1 = c[i+1, j] - c[i, j]
+    r1 = den1 == T(0.0) ? T(0.0) : (c[i, j] - c[i-1, j]) / den1
+    c_l = c[i, j] + T(0.5) * superbee(r1) * den1
+    # c_l = c[i, j] + T(0.5) * vanleer(r1) * den1
+
+    den2 = c[i+2, j] - c[i+1, j]
+    r2 = den2 == T(0.0) ? T(0.0) : (c[i+1, j] - c[i, j]) / den2
+    c_r = c[i+1, j] - T(0.5) * superbee(r2) * den2
+    # c_r = c[i+1, j] - T(0.5) * vanleer(r2) * den2
+
+    return c_l, c_r
+end
+
+# 1D-MUSCL-Rekonstruktion in y-Richtung (TVD-Schema)
+function recover_y_c(i, j, c::CuDeviceMatrix{T}) where T
+    den1 = c[i, j+1] - c[i, j]
+    r1 = den1 == T(0.0) ? T(0.0) : (c[i, j] - c[i, j-1]) / den1
+    c_l = c[i, j] + T(0.5) * superbee(r1) * den1
+    # c_l = c[i, j] + T(0.5) * vanleer(r1) * den1
+
+    den2 = c[i, j+2] - c[i, j+1]
+    r2 = den2 == T(0.0) ? T(0.0) : (c[i, j+1] - c[i, j]) / den2
+    c_r = c[i, j+1] - T(0.5) * superbee(r2) * den2
+    # c_r = c[i, j+1] - T(0.5) * vanleer(r2) * den2
+
+    return c_l, c_r
+end
+
 flux_x_vx(vx::T) where T = vx^2
 flux_y_vx(vx::T, vy::T) where T = vx*vy
 
 flux_x_vy(vx::T, vy::T) where T = vx*vy
 flux_y_vy(vy::T) where T = vy^2
+
+flux_x_c(vx::T, c::T) where T = vx*c
+flux_y_c(vy::T, c::T) where T = vy*c
 
 # berechne den numerischen Fluss in x-Richtung (H^x_{i+1/2,j})
 function local_lax_friedrichs_x_vx(vx_l::T, vx_r::T) where T
@@ -202,4 +286,14 @@ function local_lax_friedrichs_y_vy(vy_l::T, vy_r::T) where T
     flux_y = T(0.5) * (flux_y_vy(vy_l) + flux_y_vy(vy_r) - alpha * (vy_r - vy_l))
 
     return flux_y
+end
+
+# berechne den numerischen Fluss in x-Richtung (H^x_{i+1/2,j})
+function upwind_x_c(c_l::T, c_r::T, vx_right::T) where T
+    return vx_right >= T(0.0) ? flux_x_c(vx_right, c_l) : flux_x_c(vx_right, c_r)
+end
+
+# berechne den numerischen Fluss in y-Richtung (H^y_{i,j+1/2})
+function upwind_y_c(c_l::T, c_r::T, vy_top::T) where T
+    return vy_top >= T(0.0) ? flux_y_c(vy_top, c_l) : flux_y_c(vy_top, c_r)
 end
