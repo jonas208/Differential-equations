@@ -13,35 +13,32 @@ include("saving.jl")
 
 #=  Staggered Grid inklusive Rand- bzw. Ghost-Zellen
 
-+ - - - + - - - + - - - + - - - + - - - + - - - + - - - + - - - + - - - + - - - +
-|       |       |       |       |       |       |       |       |       |       |
-|   c   →   c   →   c   →   c   →   c   →   c   →   c   →   c   →   c   →   c   |
-|       |       |       |       |       |       |       |       |       |       |
-+ - ↑ - + - ↑ - + - ↑ - + - ↑ - + - ↑ - + - ↑ - + - ↑ - + - ↑ - + - ↑ - + - ↑ - +
-|       |       |       |       |       |       |       |       |       |       |
-|   c   →   c   →   c   →   c   →   c   →   c   →   c   →   c   →   c   →   c   |
-|       |       |       |       |       |       |       |       |       |       |
-+ - ↑ - + - ↑ - + - ↑ - + - ↑ - + - ↑ - + - ↑ - + - ↑ - + - ↑ - + - ↑ - + - ↑ - +
-|       |       |       |       |       |       |       |       |       |       |
-|   c   →   c   →   •   →   •   →   •   →   •   →   •   →   •   →   c   →   c   |
-|       |       |       |       |       |       |       |       |       |       |
-+ - ↑ - + - ↑ - + - ↑ - + - ↑ - + - ↑ - + - ↑ - + - ↑ - + - ↑ - + - ↑ - + - ↑ - +
-|       |       |       |       |       |       |       |       |       |       |
-|   c   →   c   →   •   →   •   →   •   →   •   →   •   →   •   →   c   →   c   |
-|       |       |       |       |       |       |       |       |       |       |
-+ - ↑ - + - ↑ - + - ↑ - + - ↑ - + - ↑ - + - ↑ - + - ↑ - + - ↑ - + - ↑ - + - ↑ - +
-|       |       |       |       |       |       |       |       |       |       |
-|   c   →   c   →   •   →   •   →   •   →   •   →   •   →   •   →   c   →   c   |
-|       |       |       |       |       |       |       |       |       |       |
-+ - ↑ - + - ↑ - 0 - ↑ - + - ↑ - + - ↑ - + - ↑ - + - ↑ - + - ↑ - + - ↑ - + - ↑ - +
-|       |       |       |       |       |       |       |       |       |       |
-|   c   →   c   →   c   →   c   →   c   →   c   →   c   →   c   →   c   →   c   |
-|       |       |       |       |       |       |       |       |       |       |
-+ - ↑ - + - ↑ - + - ↑ - + - ↑ - + - ↑ - + - ↑ - + - ↑ - + - ↑ - + - ↑ - + - ↑ - +
-|       |       |       |       |       |       |       |       |       |       |
-|   c   →   c   →   c   →   c   →   c   →   c   →   c   →   c   →   c   →   c   |
-|       |       |       |       |       |       |       |       |       |       |
-+ - - - + - - - + - - - + - - - + - - - + - - - + - - - + - - - + - - - + - - - +
+    →       →       →       →       →       →       →       →       →
+
+↑       ↑       ↑       ↑       ↑       ↑       ↑       ↑       ↑       ↑
+
+    →       →       →       →       →       →       →       →       →    
+
+↑       ↑   + - ↑ - + - ↑ - + - ↑ - + - ↑ - + - ↑ - + - ↑ - +   ↑       ↑
+            |       |       |       |       |       |       |
+    →       →   •   →   •   →   •   →   •   →   •   →   •   →       →
+            |       |       |       |       |       |       |
+↑       ↑   + - ↑ - + - ↑ - + - ↑ - + - ↑ - + - ↑ - + - ↑ - +   ↑       ↑
+            |       |       |       |       |       |       |
+    →       →   •   →   •   →   •   →   •   →   •   →   •   →       →
+            |       |       |       |       |       |       |
+↑       ↑   + - ↑ - + - ↑ - + - ↑ - + - ↑ - + - ↑ - + - ↑ - +   ↑       ↑
+            |       |       |       |       |       |       |
+    →       →   •   →   •   →   •   →   •   →   •   →   •   →       →
+            |       |       |       |       |       |       |
+↑       ↑   0 - ↑ - + - ↑ - + - ↑ - + - ↑ - + - ↑ - + - ↑ - +   ↑       ↑
+
+    →       →       →       →       →       →       →       →       →
+
+↑       ↑       ↑       ↑       ↑       ↑       ↑       ↑       ↑       ↑
+
+    →       →       →       →       →       →       →       →       →
+
 
 
 nx = nx_pressure = 6
@@ -53,19 +50,13 @@ ny_vx = ny + 4 = 7
 nx_vy = nx + 4 = 10
 ny_vy = ny + 3 = 6
 
-nx_c = nx + 4
-ny_c = ny + 4
-
-"•" sind die Mittelpunkte der Druckzellen und der c-Zellen im eigentlichen Berechnungsgebiet (nicht versetzt)
-"c" sind die Mittelpunkte der c-Ghost-Zellen außerhalb des eigentlichen Berechnungsgebiets (nicht versetzt)
+"•" sind die Mittelpunkte der Druckzellen (nicht versetzt)
 "→" sind die Mittelpunkte der Zellen der horizontalen Geschwindigkeitskomponenten (versetzt)
 "↑" sind die Mittelpunkte der Zellen der vertikalen Geschwindigkeitskomponenten (versetzt)
 
 Für jeden Rand gibt es pro Geschwindigkeitskomponente zwei Rand- bzw. Ghost-Zellen, 
 wobei in der zur jeweiligen Komponente gehörigen Dimension nur eine echte Ghost-Zelle nötig ist,
 weil die Zelle davor exakt auf dem Rand liegt. Ansonsten sind es zwei echte Ghost-Zellen.
-
-Für das c-Feld pro gibt es pro Rand zwei Lagen Ghost-Zellen.
 =#
 
 # Gibt zu dem Index einer Druckvariable den Index der rechts daneben liegenden horizontalen Geschwindigkeitskomponente zurück
@@ -101,36 +92,8 @@ get_right_bottom_vx_index(i, j) = (i, j)
 get_right_top_vx_index(i, j) = (i, j + 1)
 
 
-# Gibt zu dem Index einer Druckvariable den Index des an der gleichen Stelle liegenden c-Werts zurück
-get_c_index(i, j) = (i + 2, j + 2)
-# Gibt zu dem Index eines c-Werts den Index der an der gleichen Stelle liegenden Druckvariable zurück
-get_pressure_index(i, j) = (i - 2, j - 2)
-
-
-# Gibt zu dem Index einer horizontalen Geschwindigkeitskomponente den Index des links daneben liegenden c-Werts zurück
-get_left_c_index(i, j) = (i, j)
-# Gibt zu dem Index einer horizontalen Geschwindigkeitskomponente den Index des rechts daneben liegenden c-Werts zurück
-get_right_c_index(i, j) = (i + 1, j)
-# Gibt zu dem Index einer horizontalen Geschwindigkeitskomponente den Index des oberhalb liegenden, nach links versetzten c-Werts zurück
-get_top_left_c_index(i, j) = (i, j + 1)
-# Gibt zu dem Index einer horizontalen Geschwindigkeitskomponente den Index des oberhalb liegenden, nach rechts versetzten c-Werts zurück
-get_top_right_c_index(i, j) = (i + 1, j + 1)
-
-
-# Gibt zu dem Index einer vertikalen Geschwindigkeitskomponente den Index des unterhalb liegenden c-Werts zurück
-get_bottom_c_index(i, j) = (i, j)
-# Gibt zu dem Index einer vertikalen Geschwindigkeitskomponente den Index des oberhalb liegenden c-Werts zurück#
-get_top_c_index(i, j) = (i, j + 1)
-# Gibt zu dem Index einer vertikalen Geschwindigkeitskomponente den Index des rechts daneben liegenden, nach unten versetzten c-Werts zurück
-get_right_bottom_c_index(i, j) = (i + 1, j)
-# Gibt zu dem Index einer vertikalen Geschwindigkeitskomponente den Index des rechts daneben liegenden, nach oben versetzten c-Werts zurück
-get_right_top_c_index(i, j) = (i + 1, j + 1)
-
-
 # Gibt die Position des Zellmittelpunkts einer Druckvariable zurück
 get_pressure_position(i, j, dx::T, dy::T) where T = ((i - T(0.5)) * dx, (j - T(0.5)) * dy)
-# Gibt die Position des Zellmittelpunkts eines c-Werts zurück
-get_c_position(i, j, dx::T, dy::T) where T = ((i - T(2.5)) * dx, (j - T(2.5)) * dy)
 # Gibt die Position des Zellmittelpunkts einer horizontalen Geschwindigkeitskomponente zurück
 get_vx_position(i, j, dx::T, dy::T) where T = ((i - 2) * dx, (j - T(2.5)) * dy)
 # Gibt die Position des Zellmittelpunkts einer vertikalen Geschwindigkeitskomponente zurück
@@ -139,14 +102,10 @@ get_vy_position(i, j, dx::T, dy::T) where T = ((i - T(2.5)) * dx, (j - 2) * dy)
 struct Parameters{T<:AbstractFloat}
     Lx::T # Seitenlänge in x-Richtung der rechteckigen Oberfläche [m]
     Ly::T # Seitenlänge in y-Richtung der rechteckigen Oberfläche [m]
-
-    # Fluid 1 (c = 1)
-    dynamic_viscosity_1::T # [Pa*s]
-    density_1::T # [kg/m^3]
-
-    # Fluid 1 (c = 0)
-    dynamic_viscosity_2::T # [Pa*s]
-    density_2::T # [kg/m^3]
+    dynamic_viscosity::T # [Pa*s]
+    density::T # [kg/m^3]
+    kinematic_viscosity::T # [m^2/s]
+    horizontal_velocity::T # Einströmungsgeschwindigkeit am linken Rand [m/s]
 
     dx::T # [m]
     dy::T # [m]
@@ -160,18 +119,17 @@ struct Parameters{T<:AbstractFloat}
 
     nx_vx::Int
     ny_vx::Int
-    fluxes_vx::CuArray{T,4}
+    fluxes_vx::CuArray{T,3}
     vx_corrected::CuMatrix{T}
 
     nx_vy::Int
     ny_vy::Int
-    fluxes_vy::CuArray{T,4}
+    fluxes_vy::CuArray{T,3}
     vy_corrected::CuMatrix{T}
 
     nx_c::Int
     ny_c::Int
     fluxes_c::CuArray{T,3}
-    c_advected::CuMatrix{T}
 
     # WENO-Parameter
     ep::T
@@ -180,11 +138,13 @@ struct Parameters{T<:AbstractFloat}
     cfl::T # CFL-Zahl
     potential_time_steps::CuMatrix{T}
 
-    function Parameters(; Lx::T, Ly::T, dynamic_viscosity_1::T, density_1::T, dynamic_viscosity_2::T, density_2::T, nx, ny, ep::T, p::T, cfl::T) where T<:AbstractFloat
+    is_solid::CuMatrix{Bool}
+
+    function Parameters(; Lx::T, Ly::T, dynamic_viscosity::T, density::T, horizontal_velocity::T, nx, ny, ep::T, p::T, cfl::T, is_solid::BitMatrix) where T<:AbstractFloat
         dx = Lx / nx
         dy = Ly / ny
 
-        coefficient_mat = get_coefficient_mat(nx, ny, dx, dy)
+        coefficient_mat = get_coefficient_mat(is_solid, nx, ny, dx, dy, density)
         pressure = CUDA.zeros(T, nx, ny)
         divergence = CUDA.zeros(T, nx, ny)
 
@@ -199,37 +159,35 @@ struct Parameters{T<:AbstractFloat}
 
         nx_vx = nx + 3
         ny_vx = ny + 4
-        fluxes_vx = CUDA.zeros(T, nx_vx - 3, ny_vx - 3, 2, 2)
+        fluxes_vx = CUDA.zeros(T, nx_vx - 3, ny_vx - 3, 2)
         vx_corrected = CUDA.zeros(T, nx_vx, ny_vx)
 
         nx_vy = nx + 4
         ny_vy = ny + 3
-        fluxes_vy = CUDA.zeros(T, nx_vy - 3, ny_vy - 3, 2, 2)
+        fluxes_vy = CUDA.zeros(T, nx_vy - 3, ny_vy - 3, 2)
         vy_corrected = CUDA.zeros(T, nx_vy, ny_vy)
 
         nx_c = nx + 4
         ny_c = ny + 4
         fluxes_c = CUDA.zeros(T, nx_c - 3, ny_c - 3, 2)
-        c_advected = CUDA.zeros(T, nx_c, ny_c)
 
         potential_time_steps = CUDA.zeros(T, nx, ny)
 
         new{T}(
-            Lx, Ly, 
-            dynamic_viscosity_1, density_1,
-            dynamic_viscosity_2, density_2,
+            Lx, Ly, dynamic_viscosity, density, dynamic_viscosity / density, horizontal_velocity,
             dx, dy,
             nx, ny, lin_solve, coefficient_mat, pressure, divergence,
             nx_vx, ny_vx, fluxes_vx, vx_corrected,
             nx_vy, ny_vy, fluxes_vy, vy_corrected,
-            nx_c, ny_c, fluxes_c, c_advected,
+            nx_c, ny_c, fluxes_c,
             ep, p,
-            cfl, potential_time_steps
+            cfl, potential_time_steps,
+            CuArray(is_solid)
         )
     end
 end
 
-function fluxes_vx_kernel!(fluxes_vx::CuDeviceArray{T,4}, vx::CuDeviceMatrix{T}, vy::CuDeviceMatrix{T}, c_advected::CuDeviceMatrix{T}, dynamic_viscosity_1::T, dynamic_viscosity_2::T, dx::T, dy::T, nx_vx, ny_vx, ep::T, p::T) where T
+function fluxes_vx_kernel!(fluxes_vx::CuDeviceArray{T,3}, vx::CuDeviceMatrix{T}, vy::CuDeviceMatrix{T}, kinematic_viscosity::T, dx::T, dy::T, nx_vx, ny_vx, ep::T, p::T) where T
     i = threadIdx().x + (blockIdx().x - 1) * blockDim().x
     j = threadIdx().y + (blockIdx().y - 1) * blockDim().y
 
@@ -251,67 +209,33 @@ function fluxes_vx_kernel!(fluxes_vx::CuDeviceArray{T,4}, vx::CuDeviceMatrix{T},
         vx_l, vx_r = recover_y_vx(i, j, dx, dy, vx, ep, p)
         flux_y = local_lax_friedrichs_y_vx(vx_l, vx_r, vy_top)
 
-        fluxes_vx[i-1, j-1, 1, 1] = flux_x
-        fluxes_vx[i-1, j-1, 2, 1] = flux_y
+        fluxes_vx[i-1, j-1, 1] = flux_x - kinematic_viscosity * (vx[i+1, j] - vx[i, j]) / dx
 
-        # berechne die dynamische Viskosität am rechten und oberen Rand der aktuellen Zelle der horizontalen Geschwindigkeitskomponente
-        i_, j_ = get_left_c_index(i, j)
-        c_left = c_advected[i_, j_]
-        i_, j_ = get_right_c_index(i, j)
-        c_right = c_advected[i_, j_]
-
-        i_, j_ = get_top_left_c_index(i, j)
-        c_top_left = c_advected[i_, j_]
-        i_, j_ = get_top_right_c_index(i, j)
-        c_top_right = c_advected[i_, j_]
-        
-        c_top = T(0.25) * (c_left + c_right + c_top_left + c_top_right)
-
-        dynamic_viscosity_right = c_right * dynamic_viscosity_1 + (T(1.0) - c_right) * dynamic_viscosity_2
-        dynamic_viscosity_top = c_top * dynamic_viscosity_1 + (T(1.0) - c_top) * dynamic_viscosity_2
-
-        fluxes_vx[i-1, j-1, 1, 2] = dynamic_viscosity_right * (vx[i+1, j] - vx[i, j]) / dx
-        fluxes_vx[i-1, j-1, 2, 2] = dynamic_viscosity_top * (vx[i, j+1] - vx[i, j]) / dy
+        fluxes_vx[i-1, j-1, 2] = flux_y - kinematic_viscosity * (vx[i, j+1] - vx[i, j]) / dy
     end
 
     return nothing
 end
 
-function fvm_vx_kernel!(dvx::CuDeviceMatrix{T}, fluxes_vx::CuDeviceArray{T,4}, c_advected::CuDeviceMatrix{T}, density_1::T, density_2::T, dx::T, dy::T, nx_vx, ny_vx) where T
+function fvm_vx_kernel!(dvx::CuDeviceMatrix{T}, fluxes_vx::CuDeviceArray{T,3}, nx_vx, ny_vx, dx::T, dy::T) where T
     i = threadIdx().x + (blockIdx().x - 1) * blockDim().x
     j = threadIdx().y + (blockIdx().y - 1) * blockDim().y
 
     # nur innere Zellen, d.h. keine Rand- bzw. Ghost-Zellen
     if 3 <= i <= nx_vx - 2 && 3 <= j <= ny_vx - 2
-        flux_x_l = fluxes_vx[i-2, j-1, 1, 1]
-        flux_x_r = fluxes_vx[i-1, j-1, 1, 1]
+        flux_x_l = fluxes_vx[i-2, j-1, 1]
+        flux_x_r = fluxes_vx[i-1, j-1, 1]
 
-        flux_y_l = fluxes_vx[i-1, j-2, 2, 1]
-        flux_y_r = fluxes_vx[i-1, j-1, 2, 1]
+        flux_y_l = fluxes_vx[i-1, j-2, 2]
+        flux_y_r = fluxes_vx[i-1, j-1, 2]
 
         dvx[i, j] = -(flux_x_r - flux_x_l) / dx - (flux_y_r - flux_y_l) / dy
-
-        viscous_flux_x_l = fluxes_vx[i-2, j-1, 1, 2]
-        viscous_flux_x_r = fluxes_vx[i-1, j-1, 1, 2]
-
-        viscous_flux_y_l = fluxes_vx[i-1, j-2, 2, 2]
-        viscous_flux_y_r = fluxes_vx[i-1, j-1, 2, 2]
-
-        i_, j_ = get_left_c_index(i, j)
-        c_left = c_advected[i_, j_]
-        i_, j_ = get_right_c_index(i, j)
-        c_right = c_advected[i_, j_]
-        
-        c = T(0.5) * (c_left + c_right)
-        density = c * density_1 + (T(1.0) - c) * density_2
-
-        dvx[i, j] += ((viscous_flux_x_r - viscous_flux_x_l) / dx + (viscous_flux_y_r - viscous_flux_y_l) / dy) / density
     end
 
     return nothing
 end
 
-function fluxes_vy_kernel!(fluxes_vy::CuDeviceArray{T,4}, vx::CuDeviceMatrix{T}, vy::CuDeviceMatrix{T}, c_advected::CuDeviceMatrix{T}, dynamic_viscosity_1::T, dynamic_viscosity_2::T, dx::T, dy::T, nx_vy, ny_vy, ep::T, p::T) where T
+function fluxes_vy_kernel!(fluxes_vy::CuDeviceArray{T,3}, vx::CuDeviceMatrix{T}, vy::CuDeviceMatrix{T}, kinematic_viscosity::T, dx::T, dy::T, nx_vy, ny_vy, ep::T, p::T) where T
     i = threadIdx().x + (blockIdx().x - 1) * blockDim().x
     j = threadIdx().y + (blockIdx().y - 1) * blockDim().y
 
@@ -333,61 +257,27 @@ function fluxes_vy_kernel!(fluxes_vy::CuDeviceArray{T,4}, vx::CuDeviceMatrix{T},
         vy_l, vy_r = recover_y_vy(i, j, dx, dy, vy, ep, p)
         flux_y = local_lax_friedrichs_y_vy(vy_l, vy_r)
 
-        fluxes_vy[i-1, j-1, 1, 1] = flux_x
-        fluxes_vy[i-1, j-1, 2, 1] = flux_y
+        fluxes_vy[i-1, j-1, 1] = flux_x - kinematic_viscosity * (vy[i+1, j] - vy[i, j]) / dx
 
-        # berechne die dynamische Viskosität am rechten und oberen Rand der aktuellen Zelle der vertikalen Geschwindigkeitskomponente
-        i_, j_ = get_bottom_c_index(i, j)
-        c_bottom = c_advected[i_, j_]
-        i_, j_ = get_top_c_index(i, j)
-        c_top = c_advected[i_, j_]
-
-        i_, j_ = get_right_bottom_c_index(i, j)
-        c_right_bottom = c_advected[i_, j_]
-        i_, j_ = get_right_top_c_index(i, j)
-        c_right_top = c_advected[i_, j_]
-        
-        c_right = T(0.25) * (c_bottom + c_top + c_right_bottom + c_right_top)
-
-        dynamic_viscosity_right = c_right * dynamic_viscosity_1 + (T(1.0) - c_right) * dynamic_viscosity_2
-        dynamic_viscosity_top = c_top * dynamic_viscosity_1 + (T(1.0) - c_top) * dynamic_viscosity_2
-
-        fluxes_vy[i-1, j-1, 1, 2] = dynamic_viscosity_right * (vy[i+1, j] - vy[i, j]) / dx
-        fluxes_vy[i-1, j-1, 2, 2] = dynamic_viscosity_top * (vy[i, j+1] - vy[i, j]) / dy
+        fluxes_vy[i-1, j-1, 2] = flux_y - kinematic_viscosity * (vy[i, j+1] - vy[i, j]) / dy
     end
 
     return nothing
 end
 
-function fvm_vy_kernel!(dvy::CuDeviceMatrix{T}, fluxes_vy::CuDeviceArray{T,4}, c_advected::CuDeviceMatrix{T}, density_1::T, density_2::T, dx::T, dy::T, nx_vy, ny_vy) where T
+function fvm_vy_kernel!(dvy::CuDeviceMatrix{T}, fluxes_vy::CuDeviceArray{T,3}, nx_vy, ny_vy, dx::T, dy::T) where T
     i = threadIdx().x + (blockIdx().x - 1) * blockDim().x
     j = threadIdx().y + (blockIdx().y - 1) * blockDim().y
 
     # nur innere Zellen, d.h. keine Rand- bzw. Ghost-Zellen
     if 3 <= i <= nx_vy - 2 && 3 <= j <= ny_vy - 2
-        flux_x_l = fluxes_vy[i-2, j-1, 1, 1]
-        flux_x_r = fluxes_vy[i-1, j-1, 1, 1]
+        flux_x_l = fluxes_vy[i-2, j-1, 1]
+        flux_x_r = fluxes_vy[i-1, j-1, 1]
 
-        flux_y_l = fluxes_vy[i-1, j-2, 2, 1]
-        flux_y_r = fluxes_vy[i-1, j-1, 2, 1]
+        flux_y_l = fluxes_vy[i-1, j-2, 2]
+        flux_y_r = fluxes_vy[i-1, j-1, 2]
 
-        dvy[i, j] = -(flux_x_r - flux_x_l) / dx - (flux_y_r - flux_y_l) / dy - T(9.81)
-
-        viscous_flux_x_l = fluxes_vy[i-2, j-1, 1, 2]
-        viscous_flux_x_r = fluxes_vy[i-1, j-1, 1, 2]
-
-        viscous_flux_y_l = fluxes_vy[i-1, j-2, 2, 2]
-        viscous_flux_y_r = fluxes_vy[i-1, j-1, 2, 2]
-
-        i_, j_ = get_bottom_c_index(i, j)
-        c_bottom = c_advected[i_, j_]
-        i_, j_ = get_top_c_index(i, j)
-        c_top = c_advected[i_, j_]
-        
-        c = T(0.5) * (c_bottom + c_top)
-        density = c * density_1 + (T(1.0) - c) * density_2
-
-        dvy[i, j] += ((viscous_flux_x_r - viscous_flux_x_l) / dx + (viscous_flux_y_r - viscous_flux_y_l) / dy) / density
+        dvy[i, j] = -(flux_x_r - flux_x_l) / dx - (flux_y_r - flux_y_l) / dy
     end
 
     return nothing
@@ -407,7 +297,7 @@ function navier_stokes!(du::CuVector{T}, u::CuVector{T}, param, t::T) where T
 
 
     # Berechnung der numersichen Flüsse für die horizontalen Geschwindigkeitskomponenten
-    fluxes_vx_kernel = @cuda launch = false fluxes_vx_kernel!(param.fluxes_vx, vx, vy, param.c_advected, param.dynamic_viscosity_1, param.dynamic_viscosity_2, param.dx, param.dy, param.nx_vx, param.ny_vx, param.ep, param.p)
+    fluxes_vx_kernel = @cuda launch = false fluxes_vx_kernel!(param.fluxes_vx, vx, vy, param.kinematic_viscosity, param.dx, param.dy, param.nx_vx, param.ny_vx, param.ep, param.p)
     config = CUDA.launch_configuration(fluxes_vx_kernel.fun)
 
     threads_per_dim = Int(floor(sqrt(config.threads)))
@@ -418,10 +308,10 @@ function navier_stokes!(du::CuVector{T}, u::CuVector{T}, param, t::T) where T
     y_threads = min(param.ny_vx, threads_per_dim)
     y_blocks = cld(param.ny_vx, y_threads)
 
-    fluxes_vx_kernel(param.fluxes_vx, vx, vy, param.c_advected, param.dynamic_viscosity_1, param.dynamic_viscosity_2, param.dx, param.dy, param.nx_vx, param.ny_vx, param.ep, param.p, threads=(x_threads, y_threads), blocks=(x_blocks, y_blocks))
+    fluxes_vx_kernel(param.fluxes_vx, vx, vy, param.kinematic_viscosity, param.dx, param.dy, param.nx_vx, param.ny_vx, param.ep, param.p, threads=(x_threads, y_threads), blocks=(x_blocks, y_blocks))
 
     # Berechnung der rechten Seite für die horizontalen Geschwindigkeitskomponenten
-    fvm_vx_kernel = @cuda launch = false fvm_vx_kernel!(dvx, param.fluxes_vx, param.c_advected, param.density_1, param.density_2, param.dx, param.dy, param.nx_vx, param.ny_vx)
+    fvm_vx_kernel = @cuda launch = false fvm_vx_kernel!(dvx, param.fluxes_vx, param.nx_vx, param.ny_vx, param.dx, param.dy)
     config = CUDA.launch_configuration(fvm_vx_kernel.fun)
 
     threads_per_dim = Int(floor(sqrt(config.threads)))
@@ -432,11 +322,11 @@ function navier_stokes!(du::CuVector{T}, u::CuVector{T}, param, t::T) where T
     y_threads = min(param.ny_vx, threads_per_dim)
     y_blocks = cld(param.ny_vx, y_threads)
 
-    fvm_vx_kernel(dvx, param.fluxes_vx, param.c_advected, param.density_1, param.density_2, param.dx, param.dy, param.nx_vx, param.ny_vx, threads=(x_threads, y_threads), blocks=(x_blocks, y_blocks))
+    fvm_vx_kernel(dvx, param.fluxes_vx, param.nx_vx, param.ny_vx, param.dx, param.dy, threads=(x_threads, y_threads), blocks=(x_blocks, y_blocks))
 
 
     # Berechnung der numersichen Flüsse für die vertikalen Geschwindigkeitskomponenten
-    fluxes_vy_kernel = @cuda launch = false fluxes_vy_kernel!(param.fluxes_vy, vx, vy, param.c_advected, param.dynamic_viscosity_1, param.dynamic_viscosity_2, param.dx, param.dy, param.nx_vy, param.ny_vy, param.ep, param.p)
+    fluxes_vy_kernel = @cuda launch = false fluxes_vy_kernel!(param.fluxes_vy, vx, vy, param.kinematic_viscosity, param.dx, param.dy, param.nx_vy, param.ny_vy, param.ep, param.p)
     config = CUDA.launch_configuration(fluxes_vy_kernel.fun)
 
     threads_per_dim = Int(floor(sqrt(config.threads)))
@@ -447,10 +337,10 @@ function navier_stokes!(du::CuVector{T}, u::CuVector{T}, param, t::T) where T
     y_threads = min(param.ny_vy, threads_per_dim)
     y_blocks = cld(param.ny_vy, y_threads)
 
-    fluxes_vy_kernel(param.fluxes_vy, vx, vy, param.c_advected, param.dynamic_viscosity_1, param.dynamic_viscosity_2, param.dx, param.dy, param.nx_vy, param.ny_vy, param.ep, param.p, threads=(x_threads, y_threads), blocks=(x_blocks, y_blocks))
+    fluxes_vy_kernel(param.fluxes_vy, vx, vy, param.kinematic_viscosity, param.dx, param.dy, param.nx_vy, param.ny_vy, param.ep, param.p, threads=(x_threads, y_threads), blocks=(x_blocks, y_blocks))
 
     # Berechnung der rechten Seite für die vertikalen Geschwindigkeitskomponenten
-    fvm_vy_kernel = @cuda launch = false fvm_vy_kernel!(dvy, param.fluxes_vy, param.c_advected, param.density_1, param.density_2, param.dx, param.dy, param.nx_vy, param.ny_vy)
+    fvm_vy_kernel = @cuda launch = false fvm_vy_kernel!(dvy, param.fluxes_vy, param.nx_vy, param.ny_vy, param.dx, param.dy)
     config = CUDA.launch_configuration(fvm_vy_kernel.fun)
 
     threads_per_dim = Int(floor(sqrt(config.threads)))
@@ -461,7 +351,7 @@ function navier_stokes!(du::CuVector{T}, u::CuVector{T}, param, t::T) where T
     y_threads = min(param.ny_vy, threads_per_dim)
     y_blocks = cld(param.ny_vy, y_threads)
 
-    fvm_vy_kernel(dvy, param.fluxes_vy, param.c_advected, param.density_1, param.density_2, param.dx, param.dy, param.nx_vy, param.ny_vy, threads=(x_threads, y_threads), blocks=(x_blocks, y_blocks))
+    fvm_vy_kernel(dvy, param.fluxes_vy, param.nx_vy, param.ny_vy, param.dx, param.dy, threads=(x_threads, y_threads), blocks=(x_blocks, y_blocks))
 end
 
 function fluxes_c_kernel!(fluxes_c::CuDeviceArray{T,3}, c::CuDeviceMatrix{T}, vx_corrected::CuDeviceMatrix, vy_corrected::CuDeviceMatrix{T}, nx_c, ny_c) where T
@@ -568,6 +458,9 @@ function get_navier_stokes_u0(param::Parameters{T}) where T
     apply_boundary_conditions_vx!(vx0s, param)
     apply_boundary_conditions_vy!(vy0s, param)
 
+    apply_obstacle_conditions_vx!(vx0s, param)
+    apply_obstacle_conditions_vy!(vy0s, param)
+
     return vcat(vec(vx0s), vec(vy0s))
 end
 
@@ -583,6 +476,7 @@ function get_advection_u0(param::Parameters{T}) where T
     c0s = CuMatrix(c0s)
 
     apply_boundary_conditions_c!(c0s, param)
+    apply_obstacle_conditions_c!(c0s, param)
 
     return vec(c0s)
 end
@@ -683,79 +577,95 @@ function get_solution(ts, solutions, t, param)
     return vx_center, vy_center, pressure, c
 end
 
+#=
+img = load("obstacles/A5/A5_mask_medium_long.png")
+img = imrotate(img, π / 2)
+img = collect(img)
+is_solid = BitMatrix(alpha.(img) .== 1)
+is_solid .= false
+heatmap(is_solid)
+
 type = Float32
 
 param = Parameters(
-    Lx=type(6.25),
-    Ly=type(1.5),
-    
-    # Wasser (c = 1)
-    dynamic_viscosity_1=type(1.0e-3),
-    density_1=type(998.0),
-
-    # Luft (c = 0)
-    dynamic_viscosity_2=type(1.5e-5),
-    density_2=type(1.204),
-    
-    nx=Int(1250),
-    ny=Int(300),
-    
-    ep=type(1.0e-6), p=type(0.6),
-
-    cfl=type(0.3)
-)
-
-# Anfangsbedingungen
-vx0(x::T, y::T) where T = T(0.0)
-# vy0(x::T, y::T) where T = 3.0 <= x <= 3.5 && 1.2 <= y <= 1.4 ? T(-1.0) : T(0.0)
-vy0(x::T, y::T) where T = T(0.0)
-
-c0(x::T, y::T) where T = y <= 0.4 * sin((1 / 6.25) * 2 * pi * x) + 1.5 / 2 ? T(1.0) : T(0.0)
-# c0(x::T, y::T) where T = y <= 0.75 ? T(1.0) : T(0.0)
-# c0(x::T, y::T) where T = y <= 0.8 || (x - 3.125)^2 + (y - 1.2)^2 <= 0.25^2 ? T(1.0) : T(0.0)
-
-#=
-param = Parameters(
-    Lx=type(1.0),
+    Lx=type(12.5),
     Ly=type(3.0),
     
-    # Wasser (c = 1)
-    dynamic_viscosity_1=type(1e-3),
-    density_1=type(998.0),
-
-    # Öl (c = 0)
-    dynamic_viscosity_2=type(5e-2),
-    density_2=type(950.0),
+    # Luft
+    dynamic_viscosity=type(1.5e-5),
+    density=type(1.204),
     
-    nx=Int(2.5*300),
-    ny=Int(2.5*900),
+    # horizontal_velocity=type(8.33),
+    horizontal_velocity=type(1.0),
+    
+    nx=2500,
+    ny=600,
     
     ep=type(1.0e-6), p=type(0.6),
 
-    cfl=type(0.3)
+    cfl=type(0.5),
+
+    is_solid=is_solid
 )
 
 # Anfangsbedingungen
 vx0(x::T, y::T) where T = T(0.0)
 vy0(x::T, y::T) where T = T(0.0)
 
-c0(x::T, y::T) where T = y <= 0.2*cos(2*pi*x) + 1.5 ? T(0.0) : T(1.0)
+c0(x::T, y::T) where T = T(0.0)
 =#
+
+img = load("obstacles/NACA_0012/NACA_0012_3m_18_deg.png")
+img = imrotate(img, π / 2)
+img = collect(img)
+is_solid = BitMatrix(alpha.(img) .== 1)
+heatmap(is_solid)
+
+type = Float32
+
+param = Parameters(
+    Lx=type(3.0),
+    Ly=type(1.6425),
+    
+    # Luft
+    dynamic_viscosity=type(1.5e-5),
+    density=type(1.204),
+    
+    horizontal_velocity=type(2.0),
+    
+    nx=2305,
+    ny=1262,
+    
+    ep=type(1.0e-6), p=type(0.6),
+
+    cfl=type(0.5),
+
+    is_solid=is_solid
+)
+
+# Anfangsbedingungen
+vx0(x::T, y::T) where T = T(0.0)
+vy0(x::T, y::T) where T = T(0.0)
+
+c0(x::T, y::T) where T = T(0.0)
 
 navier_stokes_u0 = get_navier_stokes_u0(param)
 advection_u0 = get_advection_u0(param)
 
-# heatmap(Matrix(reshape(navier_stokes_u0[param.nx_vx*param.ny_vx+1:end], param.nx_vy, param.ny_vy)))
-# heatmap(Matrix(reshape(advection_u0, param.nx_c, param.ny_c)))
+#=
+heatmap(
+    Matrix(reshape(advection_u0, param.nx_c, param.ny_c))
+)
+=#
 
 # Plotting-Parameter
-max_plot_size = (1920, 1080) # maximale Auflösung der Plots
-fps = 60 # Bildwiederholrate der Animationen
+max_plot_size = (2560, 1440) # maximale Auflösung der Plots
+fps = 144 # Bildwiederholrate der Animationen
 factor_plot_size = min(max_plot_size[1] / param.nx_pressure, max_plot_size[2] / param.ny_pressure)
 plot_size = (factor_plot_size * param.nx_pressure, factor_plot_size * param.ny_pressure)
 
 # Zeitintervall
-tspan = (type(0.0), type(60.0))
+tspan = (type(0.0), type(5.0))
 n_frames = ceil(Int, tspan[2] - tspan[1]) * fps
 saveat = tspan[1]:type(1 / fps):tspan[2]
 
@@ -785,7 +695,6 @@ function run(; navier_stokes_u0::CuVector{T}, advection_u0::CuVector{T}, tspan, 
 
     while navier_stokes_integrator.t < t_end
         time_step = calculate_time_step(navier_stokes_integrator)
-        time_step = time_step <= T(5e-4) ? time_step : T(5e-4)
         set_proposed_dt!(navier_stokes_integrator, time_step)
         set_proposed_dt!(advection_integrator, time_step)
 
@@ -793,8 +702,7 @@ function run(; navier_stokes_u0::CuVector{T}, advection_u0::CuVector{T}, tspan, 
         advection_retcode = check_error(advection_integrator)
         c = reshape(advection_integrator.u, param.nx_c, param.ny_c)
         apply_boundary_conditions_c!(c, param)
-        c .= clamp.(c, T(0.0), T(1.0))
-        param.c_advected .= c
+        apply_obstacle_conditions_c!(c, param)
 
         step!(navier_stokes_integrator)
         navier_stokes_retcode = check_error(navier_stokes_integrator)
@@ -895,20 +803,28 @@ ax = GLMakie.Axis(fig[1, 1], title="Druck")
 heatmap!(pressure)
 save("plots/fluid_pressure_2d.png", fig)
 
+#=
+xs = range(param.dx/2, param.Lx-param.dx/2; length = param.nx_pressure)
+ys = range(param.dy/2, param.Ly-param.dy/2; length = param.ny_pressure)
+contourf!(xs, ys, pressure)
+=#
+
 t[] = type(2.5)
 
 GLMakie.record(fig, "plots/fluid_pressure_2d.mp4", range(tspan[1], tspan[2]; length=n_frames); framerate=fps) do time
     t[] = time
 end
 
-# Plotte die Phasenverteilung
+# Plotte den Rauch
 fig = Figure(size=plot_size)
-ax = GLMakie.Axis(fig[1, 1], title="Phasenverteilung")
+ax = GLMakie.Axis(fig[1, 1], title="Rauch")
 heatmap!(c)
-save("plots/phase_distribution_2d.png", fig)
+# image!(rotr90(load("obstacles/A5_mask_medium_long.png")))
+image!(rotr90(load("obstacles/NACA_0012/NACA_0012_3m_18_deg.png")))
+save("plots/somke_2d.png", fig)
 
 t[] = type(2.5)
 
-GLMakie.record(fig, "plots/phase_distribution_2d.mp4", range(tspan[1], tspan[2]; length=n_frames); framerate=fps) do time
+GLMakie.record(fig, "plots/smoke_2d.mp4", range(tspan[1], tspan[2]; length=n_frames); framerate=fps) do time
     t[] = time
 end
